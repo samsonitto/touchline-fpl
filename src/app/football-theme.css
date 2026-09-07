@@ -498,6 +498,16 @@ main {
 .chip-controls small {
   flex-basis: 100%;
 }
+.detail-actions button[aria-pressed="true"] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: var(--football-purple);
+  color: #a7f66b;
+  border-color: #a7f66b;
+  font-weight: 750;
+}
 .player-kit {
   position: relative;
   display: flex;

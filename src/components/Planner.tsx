@@ -1393,6 +1393,7 @@ export default function Planner() {
                     : "Move to starting XI"}
                 </button>
                 <button
+                  aria-pressed={draft.captain === detail.id}
                   disabled={
                     locked ||
                     !draft.picks.find((p) => p.player === detail.id)?.starter
@@ -1405,9 +1406,16 @@ export default function Planner() {
                     }))
                   }
                 >
-                  Make captain
+                  {draft.captain === detail.id ? (
+                    <>
+                      <Check size={16} /> Captain selected
+                    </>
+                  ) : (
+                    "Make captain"
+                  )}
                 </button>
                 <button
+                  aria-pressed={draft.vice === detail.id}
                   disabled={
                     locked ||
                     !draft.picks.find((p) => p.player === detail.id)?.starter
@@ -1420,7 +1428,13 @@ export default function Planner() {
                     }))
                   }
                 >
-                  Make vice-captain
+                  {draft.vice === detail.id ? (
+                    <>
+                      <Check size={16} /> Vice-captain selected
+                    </>
+                  ) : (
+                    "Make vice-captain"
+                  )}
                 </button>
                 <button
                   disabled={locked}
