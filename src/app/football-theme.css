@@ -431,10 +431,13 @@ main {
 .pitch-player > .fixtures {
   justify-content: center;
   width: 100%;
+  min-width: 0;
+  flex-wrap: wrap;
   margin-top: 4px;
-  gap: 2px;
+  gap: 3px 2px;
 }
 .pitch-player .fixture {
+  flex-shrink: 0;
   font-size: 8px;
   padding: 4px 3px;
 }
