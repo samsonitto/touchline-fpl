@@ -325,6 +325,81 @@ main {
 .kit-compact .kit-collar {
   border-width: 2px;
 }
+.pitch-card {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  max-width: 104px;
+  border-radius: 8px;
+  padding-top: 24px;
+}
+.pitch-card > .pitch-player {
+  width: 100%;
+  max-width: none;
+}
+.quick-sub-button {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #ffffff80;
+  border-radius: 50%;
+  background: #37003c;
+  color: white;
+  cursor: pointer;
+}
+.quick-sub-button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.pitch-card.sub-on {
+  background: #087b39;
+  outline: 3px solid #53ff91;
+}
+.pitch-card.sub-off {
+  background: #a3112d;
+  outline: 3px solid #ff788c;
+}
+.pitch-card.sub-selected {
+  outline-width: 4px;
+  box-shadow: 0 0 0 7px #ffffff80;
+}
+.sub-direction {
+  display: block;
+  padding: 4px 1px;
+  color: white;
+  text-align: center;
+  font-size: 10px;
+  font-weight: 800;
+}
+.quick-sub-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 14px;
+  background: var(--football-surface);
+  color: var(--ink);
+}
+.quick-sub-banner small {
+  flex-basis: 100%;
+}
+.pitch-card .captain-marker {
+  right: auto;
+  left: 0;
+}
+@media (max-width: 700px) {
+  .pitch-card {
+    max-width: 85px;
+  }
+  .sub-direction {
+    font-size: 8px;
+  }
+}
+
 .player-kit {
   position: relative;
   display: flex;

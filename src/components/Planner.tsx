@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
+  ArrowLeftRight,
   Check,
   ChevronRight,
   ClipboardList,
@@ -34,6 +35,7 @@ import {
 import Fixtures from "./Fixtures";
 import ThemeToggle from "./ThemeToggle";
 import ClubKit from "./ClubKit";
+import { canSubstitute, substitute } from "@/lib/substitutions";
 const KEY = "touchline:v1";
 const draftSchema = z.object({
   id: z.string(),
@@ -94,6 +96,17 @@ export default function Planner() {
     >(null),
     [historyError, setHistoryError] = useState("");
   const dialog = useRef<HTMLDialogElement>(null);
+  const [quickSub, setQuickSub] = useState<{
+    draft: string;
+    player: number;
+  } | null>(null);
+  useEffect(() => {
+    const cancel = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setQuickSub(null);
+    };
+    window.addEventListener("keydown", cancel);
+    return () => window.removeEventListener("keydown", cancel);
+  }, []);
   async function load() {
     setLoading(true);
     setError("");
@@ -168,6 +181,7 @@ export default function Planner() {
   const draft =
     state?.drafts.find((d) => d.id === state.active) ?? state?.drafts[0];
   function update(fn: (d: Draft) => Draft) {
+    setQuickSub(null);
     if (!draft) return;
     if (state?.baseline === draft.id) {
       setNotice(
@@ -189,6 +203,7 @@ export default function Planner() {
     );
   }
   function create(source?: Draft) {
+    setQuickSub(null);
     if (!catalog) return;
     const d = source
       ? {
@@ -332,6 +347,47 @@ export default function Planner() {
   );
   const benchGoalkeepers = bench.filter((player) => player.position === 1);
   const benchOutfield = bench.filter((player) => player.position !== 1);
+  const subPick =
+    !locked && quickSub?.draft === draft.id
+      ? draft.picks.find((p) => p.player === quickSub.player)
+      : undefined;
+  const subPlayer = catalog.players.find((p) => p.id === subPick?.player);
+  const subCandidates = subPick
+    ? draft.picks.filter((p) =>
+        canSubstitute(draft, subPick.player, p.player, catalog),
+      )
+    : [];
+  function startQuickSub(id: number) {
+    if (locked) return;
+    setQuickSub(
+      subPick?.player === id ? null : { draft: draft!.id, player: id },
+    );
+  }
+  function finishQuickSub(id: number) {
+    if (!subPick) return;
+    if (subPick.player === id) {
+      setQuickSub(null);
+      return;
+    }
+    if (!canSubstitute(draft!, subPick.player, id, catalog!)) {
+      setNotice(
+        "Choose a highlighted player on the other side of the bench, or cancel quick sub.",
+      );
+      return;
+    }
+    const outgoing = subPick.starter ? subPick.player : id;
+    const incoming = subPick.starter ? id : subPick.player;
+    const captaincy =
+      draft!.captain === outgoing
+        ? " Captaincy moves to the incoming player."
+        : draft!.vice === outgoing
+          ? " Vice-captaincy moves to the incoming player."
+          : "";
+    update((d) => substitute(d, subPick.player, id, catalog!));
+    setNotice(
+      `${catalog!.players.find((p) => p.id === incoming)?.name} on, ${catalog!.players.find((p) => p.id === outgoing)?.name} off.${captaincy}`,
+    );
+  }
   const sorted = catalog.players
     .filter(
       (p) =>
@@ -358,42 +414,84 @@ export default function Planner() {
     });
   function card(p: Player) {
     const pick = draft!.picks.find((x) => x.player === p.id);
+    const selected = subPick?.player === p.id;
+    const eligible = subCandidates.some(
+      (candidate) => candidate.player === p.id,
+    );
+    const direction =
+      selected || eligible ? (pick?.starter ? "off" : "on") : null;
     return (
-      <button
+      <div
         key={p.id}
-        className="pitch-player"
-        onClick={() => setDetail(p)}
-        aria-label={`Manage ${p.name}`}
+        className={`pitch-card${direction ? ` sub-${direction}` : ""}${selected ? " sub-selected" : ""}`}
       >
-        <span className="player-kit">
-          <ClubKit
-            club={catalog!.clubs.find((c) => c.id === p.club)}
-            goalkeeper={p.position === 1}
-          />
-          {draft!.captain === p.id ? (
-            <b className="captain-marker">C</b>
-          ) : draft!.vice === p.id ? (
-            <b className="captain-marker vice-marker">V</b>
-          ) : null}
-          {p.status !== "a" && (
-            <span
-              className="kit-availability"
-              title={p.news || "Availability flagged"}
-            >
-              !
-            </span>
-          )}
-        </span>
-        <strong>{p.name}</strong>
-        <span className="player-price-strip">
-          {money(p.price)} <i>·</i>{" "}
-          {catalog!.clubs.find((c) => c.id === p.club)?.short}
-          <span className="sr-only">
-            {pick?.starter ? "Starting XI" : "Substitute"}
+        <button
+          className="pitch-player"
+          onClick={() => (subPick ? finishQuickSub(p.id) : setDetail(p))}
+          aria-label={
+            subPick
+              ? selected
+                ? `Cancel quick sub for ${p.name}`
+                : eligible
+                  ? `${pick?.starter ? "Take off" : "Bring on"} ${p.name}`
+                  : `${p.name}, not eligible for this substitution`
+              : `Manage ${p.name}`
+          }
+        >
+          <span className="player-kit">
+            <ClubKit
+              club={catalog!.clubs.find((c) => c.id === p.club)}
+              goalkeeper={p.position === 1}
+            />
+            {draft!.captain === p.id ? (
+              <b className="captain-marker">C</b>
+            ) : draft!.vice === p.id ? (
+              <b className="captain-marker vice-marker">V</b>
+            ) : null}
+            {p.status !== "a" && (
+              <span
+                className="kit-availability"
+                title={p.news || "Availability flagged"}
+              >
+                !
+              </span>
+            )}
           </span>
-        </span>
-        <Fixtures player={p} catalog={catalog!} />
-      </button>
+          <strong>{p.name}</strong>
+          <span className="player-price-strip">
+            {money(p.price)} <i>·</i>{" "}
+            {catalog!.clubs.find((c) => c.id === p.club)?.short}
+            <span className="sr-only">
+              {pick?.starter ? "Starting XI" : "Substitute"}
+            </span>
+          </span>
+          <Fixtures player={p} catalog={catalog!} />
+        </button>
+        <button
+          className="quick-sub-button"
+          disabled={locked}
+          aria-label={
+            selected ? `Cancel quick sub for ${p.name}` : `Quick sub ${p.name}`
+          }
+          aria-pressed={selected}
+          title={
+            locked
+              ? "Duplicate the baseline to make substitutions"
+              : "Quick sub"
+          }
+          onClick={() =>
+            eligible ? finishQuickSub(p.id) : startQuickSub(p.id)
+          }
+        >
+          {selected ? <X size={15} /> : <ArrowLeftRight size={15} />}
+        </button>
+        {direction && (
+          <span className="sub-direction">
+            {selected ? "Selected · " : ""}
+            {direction === "on" ? "ON ↑" : "OFF ↓"}
+          </span>
+        )}
+      </div>
     );
   }
   return (
@@ -408,7 +506,10 @@ export default function Planner() {
             <button
               key={id}
               className={tab === id ? "nav-active" : ""}
-              onClick={() => setTab(id)}
+              onClick={() => {
+                setTab(id);
+                setQuickSub(null);
+              }}
             >
               {label}
               {id === "drafts" && (
@@ -480,6 +581,7 @@ export default function Planner() {
                   aria-label="Current draft"
                   value={draft.id}
                   onChange={(e) => {
+                    setQuickSub(null);
                     setState({ ...state, active: e.target.value });
                     setReplace(undefined);
                   }}
@@ -558,6 +660,25 @@ export default function Planner() {
                     Published GW{draft.imported?.gameweek} picks.{" "}
                     <button onClick={() => create(draft)}>
                       Clone into a plan <ChevronRight size={14} />
+                    </button>
+                  </div>
+                )}
+                {subPick && (
+                  <div className="quick-sub-banner" role="status">
+                    <span>
+                      <strong>
+                        {subPlayer?.name} {subPick.starter ? "off ↓" : "on ↑"}
+                      </strong>
+                      {subCandidates.length
+                        ? `Choose a ${subPick.starter ? "green substitute to bring on" : "red starter to take off"}.`
+                        : "No valid swap is available. Check your lineup or cancel."}
+                      <small>
+                        Swaps preserve formation rules. Captaincy follows the
+                        incoming player.
+                      </small>
+                    </span>
+                    <button onClick={() => setQuickSub(null)}>
+                      Cancel <X size={14} />
                     </button>
                   </div>
                 )}

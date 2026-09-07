@@ -9,6 +9,7 @@ import {
   validate,
 } from "./squad";
 import { mapCatalog, mapImport } from "./fpl";
+import { canSubstitute, substitute } from "./substitutions";
 const positions = [
   { id: 1, name: "Goalkeeper", short: "GKP", count: 2, min: 1, max: 1 },
   { id: 2, name: "Defender", short: "DEF", count: 5, min: 3, max: 5 },
@@ -53,6 +54,52 @@ const draft: Draft = {
   budget: 1000,
   updated: "2026-01-01",
 };
+describe("quick substitutions", () => {
+  it("allows either player to initiate a legal formation change", () => {
+    expect(canSubstitute(draft, 3, 12, catalog)).toBe(true);
+    expect(substitute(draft, 3, 12, catalog)).toEqual(
+      substitute(draft, 12, 3, catalog),
+    );
+    expect(validate(substitute(draft, 3, 12, catalog), catalog)).toEqual([]);
+  });
+  it("only swaps goalkeepers with goalkeepers", () => {
+    expect(canSubstitute(draft, 1, 2, catalog)).toBe(true);
+    expect(canSubstitute(draft, 1, 7, catalog)).toBe(false);
+    expect(canSubstitute(draft, 3, 2, catalog)).toBe(false);
+  });
+  it("rejects swaps that break formation limits", () => {
+    const threeDefenders = substitute(draft, 3, 12, catalog);
+    expect(canSubstitute(threeDefenders, 4, 15, catalog)).toBe(false);
+    const fiveDefenders = substitute(draft, 8, 7, catalog);
+    expect(validate(fiveDefenders, catalog)).toEqual([]);
+  });
+  it("preserves squad size and the other bench slots", () => {
+    const changed = substitute(draft, 3, 12, catalog);
+    expect(changed.picks.filter((p) => p.starter)).toHaveLength(11);
+    expect(new Set(changed.picks.map((p) => p.player)).size).toBe(15);
+    expect(
+      changed.picks.filter((p) => !p.starter).map((p) => p.player),
+    ).toEqual([2, 7, 3, 15]);
+    expect(draft.picks.find((p) => p.player === 3)?.starter).toBe(true);
+  });
+  it("hands captain and vice captain to their incoming replacement", () => {
+    expect(substitute(draft, 13, 15, catalog).captain).toBe(15);
+    const changed = substitute(draft, 15, 14, catalog);
+    expect(changed.vice).toBe(15);
+    expect(validate(changed, catalog)).toEqual([]);
+  });
+  it("leaves invalid and same-side selections untouched", () => {
+    for (const [a, b] of [
+      [1, 7],
+      [3, 4],
+      [7, 12],
+      [3, 999],
+      [3, 3],
+    ]) {
+      expect(substitute(draft, a, b, catalog)).toBe(draft);
+    }
+  });
+});
 describe("squad rules", () => {
   it("accepts a complete valid 4-4-2 squad", () => {
     expect(validate(draft, catalog)).toEqual([]);
