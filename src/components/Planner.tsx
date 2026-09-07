@@ -33,6 +33,7 @@ import {
 } from "@/lib/squad";
 import Fixtures from "./Fixtures";
 import ThemeToggle from "./ThemeToggle";
+import ClubKit from "./ClubKit";
 const KEY = "touchline:v1";
 const draftSchema = z.object({
   id: z.string(),
@@ -359,17 +360,32 @@ export default function Planner() {
         onClick={() => setDetail(p)}
         aria-label={`Manage ${p.name}`}
       >
-        <span className={`shirt shirt-${p.club % 6}`}>
-          <Shield size={34} />
+        <span className="player-kit">
+          <ClubKit
+            club={catalog!.clubs.find((c) => c.id === p.club)}
+            goalkeeper={p.position === 1}
+          />
           {draft!.captain === p.id ? (
-            <b>C</b>
+            <b className="captain-marker">C</b>
           ) : draft!.vice === p.id ? (
-            <b>V</b>
+            <b className="captain-marker vice-marker">V</b>
           ) : null}
+          {p.status !== "a" && (
+            <span
+              className="kit-availability"
+              title={p.news || "Availability flagged"}
+            >
+              !
+            </span>
+          )}
         </span>
         <strong>{p.name}</strong>
-        <span>
-          {money(p.price)} <i>·</i> {pick?.starter ? "XI" : "SUB"}
+        <span className="player-price-strip">
+          {money(p.price)} <i>·</i>{" "}
+          {catalog!.clubs.find((c) => c.id === p.club)?.short}
+          <span className="sr-only">
+            {pick?.starter ? "Starting XI" : "Substitute"}
+          </span>
         </span>
         <Fixtures player={p} catalog={catalog!} />
       </button>
@@ -406,15 +422,17 @@ export default function Planner() {
       <main>
         <div className="page-heading">
           <div>
-            <span className="eyebrow">YOUR SQUAD. YOUR NEXT MOVE.</span>
+            <span className="eyebrow">
+              FANTASY FOOTBALL · INDEPENDENT PLANNER
+            </span>
             <h1>
               {tab === "drafts"
-                ? "Room for another idea."
-                : "A game plan worth playing."}
+                ? "My saved squads"
+                : tab === "import"
+                  ? "Import your FPL team"
+                  : "Squad planner"}
             </h1>
-            <p>
-              Build your squad. Explore the possibilities. Stay one move ahead.
-            </p>
+            <p>Pick your players. Set your captain. Plan your next Gameweek.</p>
           </div>
           <button className="primary" onClick={() => setTab("import")}>
             <Download size={17} /> Import FPL team
@@ -594,7 +612,7 @@ export default function Planner() {
                 </div>
                 <div className="bench">
                   <div className="bench-heading">
-                    <span>SUBSTITUTES</span>
+                    <span>SUBSTITUTES BENCH</span>
                     <small>
                       Goalkeeper + 3 outfield players · click to manage
                     </small>
@@ -845,9 +863,11 @@ export default function Planner() {
                           className="player-info"
                           onClick={() => setDetail(p)}
                         >
-                          <span className={`club-badge shirt-${p.club % 6}`}>
-                            {catalog.clubs.find((c) => c.id === p.club)?.short}
-                          </span>
+                          <ClubKit
+                            club={catalog.clubs.find((c) => c.id === p.club)}
+                            goalkeeper={p.position === 1}
+                            compact
+                          />
                           <span>
                             <strong>
                               {p.name}

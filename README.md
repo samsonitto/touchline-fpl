@@ -2,6 +2,8 @@
 
 A responsive squad planner for **standard Fantasy Premier League**, not FPL Draft. Build a 15-player squad on a pitch, filter the official player pool, manage starters and captaincy, save named drafts, and import public picks.
 
+The purple-and-green interface includes original CSS club-colour shirt illustrations and a distinct generic goalkeeper shirt. These are visual club identifiers, not official or season-specific kit replicas; no crests, sponsors, or remote kit images are used. Club abbreviations determine colours independently of FPL's changing numeric team IDs. Unknown clubs receive a neutral shirt. Light and dark themes share the same pitch and kit colours.
+
 ## Run
 
 Requires Node.js 20.9+ and npm.
