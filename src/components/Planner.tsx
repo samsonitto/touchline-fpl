@@ -148,8 +148,15 @@ export default function Planner() {
     const cancel = (event: KeyboardEvent) => {
       if (event.key === "Escape") setQuickSub(null);
     };
+    const openShared = () => {
+      if (window.location.hash.startsWith("#squad=")) setMobile("tools");
+    };
     window.addEventListener("keydown", cancel);
-    return () => window.removeEventListener("keydown", cancel);
+    window.addEventListener("hashchange", openShared);
+    return () => {
+      window.removeEventListener("keydown", cancel);
+      window.removeEventListener("hashchange", openShared);
+    };
   }, []);
   async function load() {
     setLoading(true);
@@ -157,6 +164,7 @@ export default function Planner() {
     try {
       const c = await api<Catalog>("/api/catalog");
       setCatalog(c);
+      if (window.location.hash.startsWith("#squad=")) setMobile("tools");
       let restored: SavedState | null = null;
       try {
         const raw = localStorage.getItem(KEY);
@@ -280,6 +288,11 @@ export default function Planner() {
     setReplace(undefined);
     setTab("builder");
   }
+  function showMobile(view: string) {
+    setMobile(view);
+    if (window.matchMedia("(max-width: 700px)").matches)
+      window.scrollTo({ top: 0, behavior: "instant" });
+  }
   function undoRedo(direction: "undo" | "redo") {
     if (!draft || state?.baseline === draft.id) return;
     const result = travel(
@@ -322,9 +335,11 @@ export default function Planner() {
       );
       if (existing) {
         setState({ ...state, active: existing.id });
+        showMobile("squad");
         return;
       }
       setState({ ...state, drafts: [...state.drafts, next], active: next.id });
+      showMobile("squad");
       setQuickSub(null);
       setReplace(undefined);
       setDetail(null);
@@ -668,7 +683,7 @@ export default function Planner() {
           <ThemeToggle />
         </div>
       </header>
-      <main>
+      <main className={tab === "builder" ? "planner-main" : undefined}>
         <div className="page-heading">
           <div>
             <span className="eyebrow">
@@ -776,88 +791,112 @@ export default function Planner() {
                 <span>Duplicate</span>
               </button>
             </section>
-            <Sharing draft={draft} catalog={catalog} onCopy={create} />
-            <Timeline
-              draft={draft}
-              catalog={sourceCatalog!}
-              drafts={state.drafts}
-              locked={locked}
-              onStart={() =>
-                update((d) => ({
-                  ...d,
-                  gameweek: sourceCatalog!.projectionGameweek!,
-                  timeline: { series: d.id },
-                }))
-              }
-              onNext={carryForward}
-              onSelect={(id) => {
-                setState({ ...state, active: id });
-                setQuickSub(null);
-                setReplace(undefined);
-                setDetail(null);
-              }}
-              onRefresh={() => {
-                const parent = state.drafts.find(
-                  (d) => d.id === draft.timeline?.parent,
-                );
-                if (!parent || timelineStale(parent, state.drafts)) {
-                  setNotice("Restore or refresh the preceding week first.");
-                  return;
-                }
-                try {
-                  const rebuilt = nextWeek(parent, sourceCatalog!);
-                  update((d) => ({ ...rebuilt, id: d.id, name: d.name }));
-                } catch (e) {
-                  setNotice((e as Error).message);
-                }
-              }}
-            />
-            <BestXI
-              key={`${draft.id}:${draft.updated}`}
-              draft={draft}
-              catalog={catalog}
-              locked={locked}
-              onApply={(suggestion) => {
-                update(() => suggestion);
-                setNotice(
-                  "Suggested XI and captain applied. You can undo this change.",
-                );
-              }}
-            />
-            <div className="edit-toolbar" aria-label="Edit history">
-              <button
-                disabled={locked || !editHistories[draft.id]?.past.length}
-                onClick={() => undoRedo("undo")}
-              >
-                ↶ Undo
-              </button>
-              <button
-                disabled={locked || !editHistories[draft.id]?.future.length}
-                onClick={() => undoRedo("redo")}
-              >
-                ↷ Redo
-              </button>
-              <small>Last 50 changes per plan · this session</small>
+            <div className="mobile-tabs" aria-label="Planner views">
+              {[
+                ["squad", "My squad"],
+                ["players", "Find players"],
+                ["tools", "Tools"],
+              ].map(([id, label]) => (
+                <button
+                  key={id}
+                  className={mobile === id ? "active" : ""}
+                  aria-pressed={mobile === id}
+                  onClick={() => showMobile(id)}
+                >
+                  {label}
+                </button>
+              ))}
             </div>
-            <TransferPlanning
-              draft={draft}
-              catalog={catalog}
-              locked={locked}
-              update={update}
-            />
-            <div className="mobile-tabs">
-              <button
-                className={mobile === "squad" ? "active" : ""}
-                onClick={() => setMobile("squad")}
-              >
-                My squad
-              </button>
-              <button
-                className={mobile === "players" ? "active" : ""}
-                onClick={() => setMobile("players")}
-              >
-                Find players
-              </button>
+            <div
+              className={`planning-tools mobile-${mobile === "tools" ? "show" : "hide"}`}
+            >
+              <Sharing
+                draft={draft}
+                catalog={catalog}
+                onCopy={(source) => {
+                  create(source);
+                  showMobile("squad");
+                }}
+              />
+              <details className="tool-section">
+                <summary>
+                  Gameweek timeline{" "}
+                  {draft.gameweek ? `· GW${draft.gameweek}` : ""}
+                </summary>
+                <Timeline
+                  draft={draft}
+                  catalog={sourceCatalog!}
+                  drafts={state.drafts}
+                  locked={locked}
+                  onStart={() =>
+                    update((d) => ({
+                      ...d,
+                      gameweek: sourceCatalog!.projectionGameweek!,
+                      timeline: { series: d.id },
+                    }))
+                  }
+                  onNext={carryForward}
+                  onSelect={(id) => {
+                    setState({ ...state, active: id });
+                    showMobile("squad");
+                    setQuickSub(null);
+                    setReplace(undefined);
+                    setDetail(null);
+                  }}
+                  onRefresh={() => {
+                    const parent = state.drafts.find(
+                      (d) => d.id === draft.timeline?.parent,
+                    );
+                    if (!parent || timelineStale(parent, state.drafts)) {
+                      setNotice("Restore or refresh the preceding week first.");
+                      return;
+                    }
+                    try {
+                      const rebuilt = nextWeek(parent, sourceCatalog!);
+                      update((d) => ({ ...rebuilt, id: d.id, name: d.name }));
+                    } catch (e) {
+                      setNotice((e as Error).message);
+                    }
+                  }}
+                />
+              </details>
+              <details className="tool-section">
+                <summary>Best XI & captain suggestion</summary>
+                <BestXI
+                  key={`${draft.id}:${draft.updated}`}
+                  draft={draft}
+                  catalog={catalog}
+                  locked={locked}
+                  onApply={(suggestion) => {
+                    update(() => suggestion);
+                    showMobile("squad");
+                    setNotice(
+                      "Suggested XI and captain applied. You can undo this change.",
+                    );
+                  }}
+                />
+              </details>
+              <div className="edit-toolbar" aria-label="Edit history">
+                <button
+                  disabled={locked || !editHistories[draft.id]?.past.length}
+                  onClick={() => undoRedo("undo")}
+                >
+                  ↶ Undo
+                </button>
+                <button
+                  disabled={locked || !editHistories[draft.id]?.future.length}
+                  onClick={() => undoRedo("redo")}
+                >
+                  ↷ Redo
+                </button>
+                <small>Last 50 changes per plan · this session</small>
+              </div>
+              <TransferPlanning
+                draft={draft}
+                catalog={catalog}
+                locked={locked}
+                update={update}
+              />
             </div>
             <div className="builder-grid">
               <section
@@ -865,45 +904,82 @@ export default function Planner() {
               >
                 <div className="panel-heading">
                   <h2>
-                    <Shield size={18} /> The starting XI
+                    <Shield size={18} /> Starting XI{" "}
+                    <small>
+                      {draft.picks.filter((p) => p.starter).length}/11
+                    </small>
                   </h2>
                   <span className="pill">
                     {locked ? "BASELINE" : "PLANNING MODE"}
                   </span>
+                  <div className="mobile-undo">
+                    <button
+                      aria-label="Undo last change"
+                      disabled={locked || !editHistories[draft.id]?.past.length}
+                      onClick={() => undoRedo("undo")}
+                    >
+                      ↶
+                    </button>
+                    <button
+                      aria-label="Redo last change"
+                      disabled={
+                        locked || !editHistories[draft.id]?.future.length
+                      }
+                      onClick={() => undoRedo("redo")}
+                    >
+                      ↷
+                    </button>
+                  </div>
                 </div>
                 <div className="projection-summary">
-                  <fieldset className="chip-controls" disabled={locked}>
-                    <legend>Planning chip · {projectionLabel}</legend>
-                    {(
-                      [
-                        [null, "No chip"],
-                        ["triple-captain", "Triple Captain ×3"],
-                        ["bench-boost", "Bench Boost"],
-                      ] as const
-                    ).map(([chip, label]) => (
-                      <button
-                        key={chip ?? "none"}
-                        type="button"
-                        aria-pressed={(draft.chip ?? null) === chip}
-                        onClick={() => update((d) => ({ ...d, chip }))}
-                      >
-                        {label}
-                      </button>
-                    ))}
+                  <details className="squad-options">
+                    <summary>
+                      {draft.chip === "triple-captain"
+                        ? "Triple Captain ×3"
+                        : draft.chip === "bench-boost"
+                          ? "Bench Boost active"
+                          : "Chips & xPts details"}
+                    </summary>
+                    <fieldset className="chip-controls" disabled={locked}>
+                      <legend>Planning chip · {projectionLabel}</legend>
+                      {(
+                        [
+                          [null, "No chip"],
+                          ["triple-captain", "Triple Captain ×3"],
+                          ["bench-boost", "Bench Boost"],
+                        ] as const
+                      ).map(([chip, label]) => (
+                        <button
+                          key={chip ?? "none"}
+                          type="button"
+                          aria-pressed={(draft.chip ?? null) === chip}
+                          onClick={() => update((d) => ({ ...d, chip }))}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                      <small>
+                        One chip per gameweek. Timeline checks prevent using the
+                        same chip twice in a season half; prior official chip
+                        usage must be checked in FPL.
+                      </small>
+                    </fieldset>
                     <small>
-                      One chip per gameweek. Timeline checks prevent using the
-                      same chip twice in a season half; prior official chip
-                      usage must be checked in FPL.
+                      FPL estimates before transfer hits; captain ×
+                      {draft.chip === "triple-captain" ? 3 : 2}. Bench{" "}
+                      {draft.chip === "bench-boost" ? "included" : "excluded"}.
+                      No automatic substitutions or vice-captain fallback.
+                      Missing projections display —.
                     </small>
-                  </fieldset>
+                  </details>
                   <div>
-                    <span>{projectionLabel} · Total xPts before hits</span>
+                    <span>{projectionLabel} · xPts*</span>
                     <strong>
                       {formatXpts(projectedTotal(draft, projection))}
                     </strong>
                   </div>
                   <div>
-                    <span>{projectionLabel} · Starting XI xPts</span>
+                    <span>Starting XI</span>
                     <strong>{formatXpts(projection.starters)}</strong>
                   </div>
                   <div>
@@ -913,7 +989,7 @@ export default function Planner() {
                     </span>
                     <strong>{formatXpts(projection.bench)}</strong>
                   </div>
-                  <small>
+                  <small className="projection-caveat">
                     FPL estimates · captain ×
                     {draft.chip === "triple-captain" ? 3 : 2} in XI total. No
                     automatic substitutions or vice-captain fallback.{" "}
@@ -990,7 +1066,7 @@ export default function Planner() {
                                     position: pos.id,
                                   },
                                 });
-                                setMobile("players");
+                                showMobile("players");
                                 setSearch("");
                               }}
                               aria-label={`Find a ${pos.name.toLowerCase()}`}
@@ -1675,7 +1751,7 @@ export default function Planner() {
                     });
                     setDetail(null);
                     setTab("builder");
-                    setMobile("players");
+                    showMobile("players");
                   }}
                 >
                   Replace player

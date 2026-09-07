@@ -1288,3 +1288,169 @@ html[data-theme="dark"] .player-table {
     max-height: none;
   }
 }
+
+.tool-section {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--football-surface);
+  margin-bottom: 12px;
+}
+.tool-section > summary {
+  cursor: pointer;
+  padding: 14px 16px;
+  font-size: 14px;
+  font-weight: 700;
+}
+.tool-section > section {
+  border: 0;
+  margin: 0;
+}
+.squad-options {
+  flex-basis: 100%;
+  order: 4;
+  font-size: 12px;
+  border-top: 1px solid var(--line);
+  padding-top: 8px;
+}
+.squad-options > summary {
+  cursor: pointer;
+  min-height: 32px;
+  padding: 6px 0;
+  font-weight: 700;
+}
+.mobile-undo {
+  display: none;
+}
+@media (max-width: 700px) {
+  .planner-main {
+    padding-top: 8px;
+  }
+  .planner-main .page-heading {
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+  }
+  .planner-main .page-heading h1 {
+    font-size: 21px;
+    letter-spacing: -0.5px;
+  }
+  .planner-main .page-heading .eyebrow,
+  .planner-main .page-heading p,
+  .planner-main .page-heading::before,
+  .planner-main .page-heading::after {
+    display: none;
+  }
+  .planner-main .page-heading .primary {
+    font-size: 11px;
+    min-height: 40px;
+    padding: 8px;
+    white-space: nowrap;
+  }
+  .planner-main .context-bar {
+    padding-bottom: 8px;
+    gap: 4px;
+  }
+  .planner-main .context-bar > span:last-child {
+    display: none;
+  }
+  .planner-main .summary {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+  }
+  .planner-main .summary > div:first-child {
+    grid-column: auto;
+    padding: 0;
+    border: 0;
+    min-width: 0;
+  }
+  .planner-main .summary > div:nth-child(2) {
+    padding: 0;
+    border: 0;
+    text-align: right;
+  }
+  .planner-main .summary > div:nth-child(3),
+  .planner-main .summary > div:nth-child(4),
+  .planner-main .summary small {
+    display: none;
+  }
+  .planner-main .summary select {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    font-size: 14px;
+  }
+  .planner-main .summary strong {
+    font-size: 21px;
+  }
+  .planner-main .mobile-tabs {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    margin-bottom: 8px;
+    box-shadow: 0 2px 5px #00000012;
+  }
+  .planner-main .mobile-tabs button {
+    min-height: 44px;
+    flex: 1;
+  }
+  .planning-tools.mobile-hide {
+    display: none;
+  }
+  .mobile-undo {
+    display: flex;
+    margin-left: auto;
+    gap: 4px;
+  }
+  .mobile-undo button {
+    width: 36px;
+    min-height: 44px;
+    font-size: 22px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+  }
+  .squad-panel > .panel-heading {
+    padding: 8px 12px;
+    gap: 8px;
+  }
+  .squad-panel > .panel-heading .pill {
+    display: none;
+  }
+  .projection-summary {
+    padding: 8px 12px;
+    gap: 6px 16px;
+  }
+  .projection-summary > div {
+    flex: 1;
+    min-width: 0;
+    gap: 2px;
+  }
+  .projection-summary span {
+    font-size: 10px;
+  }
+  .projection-summary strong {
+    font-size: 20px;
+  }
+  .projection-summary .projection-caveat {
+    display: none;
+  }
+  .squad-options {
+    padding-top: 4px;
+  }
+  .squad-options > summary {
+    min-height: 36px;
+  }
+  .tool-section > summary {
+    min-height: 48px;
+  }
+  .transfer-planning {
+    margin-bottom: 12px;
+  }
+  .sharing-panel {
+    margin-bottom: 12px;
+  }
+}
