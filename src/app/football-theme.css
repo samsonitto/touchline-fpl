@@ -461,6 +461,43 @@ main {
 .player-position-detail {
   flex-basis: 100%;
 }
+.chip-controls {
+  flex-basis: 100%;
+  border: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.chip-controls legend {
+  font-size: 12px;
+  margin-bottom: 8px;
+  font-weight: 700;
+  color: var(--ink);
+}
+.chip-controls button {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--ink);
+  background: var(--football-surface);
+  font-size: 12px;
+  cursor: pointer;
+}
+.chip-controls button[aria-pressed="true"] {
+  background: var(--football-purple);
+  color: #a7f66b;
+  border-color: #a7f66b;
+}
+.chip-controls:disabled {
+  opacity: 0.6;
+}
+.chip-controls button:disabled {
+  cursor: default;
+}
+.chip-controls small {
+  flex-basis: 100%;
+}
 .player-kit {
   position: relative;
   display: flex;

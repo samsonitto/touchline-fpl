@@ -36,9 +36,10 @@ import Fixtures from "./Fixtures";
 import ThemeToggle from "./ThemeToggle";
 import ClubKit from "./ClubKit";
 import { canSubstitute, substitute } from "@/lib/substitutions";
-import { formatXpts, squadProjection } from "@/lib/projections";
+import { formatXpts, squadProjection, projectedTotal } from "@/lib/projections";
 const KEY = "touchline:v1";
 const draftSchema = z.object({
+  chip: z.enum(["triple-captain", "bench-boost"]).nullish(),
   id: z.string(),
   name: z.string(),
   picks: z
@@ -449,7 +450,9 @@ export default function Planner() {
               goalkeeper={p.position === 1}
             />
             {draft!.captain === p.id ? (
-              <b className="captain-marker">C</b>
+              <b className="captain-marker">
+                {draft!.chip === "triple-captain" ? "3×" : "C"}
+              </b>
             ) : draft!.vice === p.id ? (
               <b className="captain-marker vice-marker">V</b>
             ) : null}
@@ -672,17 +675,47 @@ export default function Planner() {
                   </span>
                 </div>
                 <div className="projection-summary">
+                  <fieldset className="chip-controls" disabled={locked}>
+                    <legend>Planning chip · {projectionLabel}</legend>
+                    {(
+                      [
+                        [null, "No chip"],
+                        ["triple-captain", "Triple Captain ×3"],
+                        ["bench-boost", "Bench Boost"],
+                      ] as const
+                    ).map(([chip, label]) => (
+                      <button
+                        key={chip ?? "none"}
+                        type="button"
+                        aria-pressed={(draft.chip ?? null) === chip}
+                        onClick={() => update((d) => ({ ...d, chip }))}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                    <small>One chip at a time. Saved to this plan only.</small>
+                  </fieldset>
+                  <div>
+                    <span>{projectionLabel} · Total xPts</span>
+                    <strong>
+                      {formatXpts(projectedTotal(draft, projection))}
+                    </strong>
+                  </div>
                   <div>
                     <span>{projectionLabel} · Starting XI xPts</span>
                     <strong>{formatXpts(projection.starters)}</strong>
                   </div>
                   <div>
-                    <span>Bench xPts</span>
+                    <span>
+                      Bench xPts ·{" "}
+                      {draft.chip === "bench-boost" ? "included" : "excluded"}
+                    </span>
                     <strong>{formatXpts(projection.bench)}</strong>
                   </div>
                   <small>
-                    FPL estimates · captain ×2 in XI total · bench excluded. No
-                    automatic substitutions or chips.{" "}
+                    FPL estimates · captain ×
+                    {draft.chip === "triple-captain" ? 3 : 2} in XI total. No
+                    automatic substitutions or vice-captain fallback.{" "}
                     {draft.picks.filter((p) => p.starter).length !== 11
                       ? "Incomplete XI: selected players only. "
                       : ""}

@@ -58,6 +58,7 @@ export interface Pick {
   starter: boolean;
 }
 export interface Draft {
+  chip?: "triple-captain" | "bench-boost" | null;
   id: string;
   name: string;
   picks: Pick[];

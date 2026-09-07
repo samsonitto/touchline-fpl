@@ -9,7 +9,7 @@ import {
   validate,
 } from "./squad";
 import { mapCatalog, mapImport } from "./fpl";
-import { squadProjection, formatXpts } from "./projections";
+import { squadProjection, formatXpts, projectedTotal } from "./projections";
 import { bootstrapSchema } from "./fpl";
 import { canSubstitute, substitute } from "./substitutions";
 const positions = [
@@ -110,6 +110,13 @@ describe("squad rules", () => {
       players: catalog.players.map((p) => ({ ...p, expectedPoints: 2.5 })),
     };
     expect(squadProjection(draft, c)).toEqual({ starters: 30, bench: 10 });
+    const triple: Draft = { ...draft, chip: "triple-captain" };
+    expect(projectedTotal(triple, squadProjection(triple, c))).toBe(32.5);
+    const boost: Draft = { ...draft, chip: "bench-boost" };
+    expect(projectedTotal(boost, squadProjection(boost, c))).toBe(40);
+    expect(projectedTotal(boost, { starters: 30, bench: null })).toBeNull();
+    expect(projectedTotal(draft, { starters: 30, bench: null })).toBe(30);
+    expect(squadProjection({ ...triple, captain: 2 }, c).starters).toBe(27.5);
     expect(squadProjection({ ...draft, captain: 2 }, c).starters).toBe(27.5);
     expect(squadProjection({ ...draft, picks: [] }, c)).toEqual({
       starters: null,
