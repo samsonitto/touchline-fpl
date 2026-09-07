@@ -9,6 +9,8 @@ import {
   validate,
 } from "./squad";
 import { mapCatalog, mapImport } from "./fpl";
+import { squadProjection, formatXpts } from "./projections";
+import { bootstrapSchema } from "./fpl";
 import { canSubstitute, substitute } from "./substitutions";
 const positions = [
   { id: 1, name: "Goalkeeper", short: "GKP", count: 2, min: 1, max: 1 },
@@ -101,6 +103,89 @@ describe("quick substitutions", () => {
   });
 });
 describe("squad rules", () => {
+  it("totals projections with captain doubled and bench separate", () => {
+    const c = {
+      ...catalog,
+      projectionGameweek: 4,
+      players: catalog.players.map((p) => ({ ...p, expectedPoints: 2.5 })),
+    };
+    expect(squadProjection(draft, c)).toEqual({ starters: 30, bench: 10 });
+    expect(squadProjection({ ...draft, captain: 2 }, c).starters).toBe(27.5);
+    expect(squadProjection({ ...draft, picks: [] }, c)).toEqual({
+      starters: null,
+      bench: null,
+    });
+    expect(
+      squadProjection(draft, { ...c, projectionGameweek: null }).starters,
+    ).toBeNull();
+  });
+  it("keeps zero projections and reports missing values without partial totals", () => {
+    const c = {
+      ...catalog,
+      projectionGameweek: 4,
+      players: catalog.players.map((p) => ({
+        ...p,
+        expectedPoints: 0 as number | null,
+      })),
+    };
+    expect(squadProjection(draft, c)).toEqual({ starters: 0, bench: 0 });
+    c.players[0].expectedPoints = null;
+    expect(squadProjection(draft, c)).toEqual({ starters: null, bench: 0 });
+    expect(formatXpts(0)).toBe("0.0");
+    expect(formatXpts(null)).toBe("—");
+  });
+  it("maps FPL projections and the explicit next gameweek without fixture multipliers", () => {
+    const raw = {
+      elements: [
+        {
+          id: 1,
+          web_name: "Test",
+          first_name: "Test",
+          second_name: "Player",
+          team: 1,
+          element_type: 1,
+          now_cost: 50,
+          total_points: 5,
+          ep_next: "8.5",
+          form: "2.0",
+          selected_by_percent: "1.0",
+          points_per_game: "2.0",
+          status: "a",
+          news: "",
+        },
+      ],
+      teams: [{ id: 1, name: "Club", short_name: "CLU" }],
+      element_types: positions.map((p) => ({
+        id: p.id,
+        singular_name: p.name,
+        singular_name_short: p.short,
+        squad_select: p.count,
+        squad_min_play: p.min,
+        squad_max_play: p.max,
+      })),
+      events: [
+        {
+          id: 4,
+          name: "Gameweek 4",
+          deadline_time: "2026-09-12T12:30:00Z",
+          is_current: false,
+          is_next: true,
+          finished: false,
+        },
+      ],
+    };
+    const mapped = mapCatalog(raw, []);
+    expect(mapped.projectionGameweek).toBe(4);
+    expect(mapped.players[0].expectedPoints).toBe(8.5);
+    for (const value of [null, undefined, "", "invalid"]) {
+      expect(
+        bootstrapSchema.parse({
+          ...raw,
+          elements: [{ ...raw.elements[0], ep_next: value }],
+        }).elements[0].ep_next ?? null,
+      ).toBeNull();
+    }
+  });
   it("accepts a complete valid 4-4-2 squad", () => {
     expect(validate(draft, catalog)).toEqual([]);
     expect(formation(draft, catalog)).toBe("4–4–2");

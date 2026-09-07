@@ -46,6 +46,8 @@ Availability, price and fixture data can change. Fixtures include the next three
 
 ## Deploy to Vercel
 
+Player cards show FPL's `ep_next` projection for the event explicitly marked `is_next`. These are estimates, displayed once per gameweek without multiplying by fixture count. Starting XI xPts include a double captain contribution; bench xPts are separate. Automatic substitutions, vice-captain fallback and chips are not modelled. Missing projections display a dash and prevent a misleading partial total. Incomplete lineups are labelled as selected-player totals.
+
 Import this directory as a Next.js project, or deploy it with Vercel's CLI/connector. Use `npm run build`; no environment setup is required. Upstream FPL access depends on FPL accepting requests from the deployment region. The UI handles blocked/unavailable responses explicitly.
 
 Unofficial application, not affiliated with the Premier League. No Premier League or club logos are used.

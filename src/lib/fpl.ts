@@ -16,6 +16,7 @@ export const bootstrapSchema = z.object({
         element_type: integer,
         now_cost: integer.nonnegative(),
         total_points: integer,
+        ep_next: numeric.nullish().catch(null),
         form: numeric,
         selected_by_percent: numeric,
         points_per_game: numeric,
@@ -45,6 +46,7 @@ export const bootstrapSchema = z.object({
       name: z.string(),
       deadline_time: z.string(),
       is_current: z.boolean(),
+      is_next: z.boolean().optional(),
       finished: z.boolean(),
     }),
   ),
@@ -97,6 +99,7 @@ export function mapCatalog(raw: unknown, fixtures: unknown): Catalog {
   )
     throw new Error("Invalid player references");
   return {
+    projectionGameweek: b.events.find((e) => e.is_next)?.id ?? null,
     players: b.elements.map((p) => ({
       id: p.id,
       name: p.web_name,
@@ -105,6 +108,7 @@ export function mapCatalog(raw: unknown, fixtures: unknown): Catalog {
       position: p.element_type,
       price: p.now_cost,
       points: p.total_points,
+      expectedPoints: p.ep_next ?? null,
       form: p.form,
       ownership: p.selected_by_percent,
       ppg: p.points_per_game,

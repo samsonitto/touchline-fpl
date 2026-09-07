@@ -6,6 +6,7 @@ export interface Player {
   position: number;
   price: number;
   points: number;
+  expectedPoints?: number | null;
   form: number;
   ownership: number;
   ppg: number;
@@ -43,6 +44,7 @@ export interface Fixture {
   awayDifficulty: number;
 }
 export interface Catalog {
+  projectionGameweek?: number | null;
   players: Player[];
   clubs: Club[];
   positions: Position[];

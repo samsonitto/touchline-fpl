@@ -36,6 +36,7 @@ import Fixtures from "./Fixtures";
 import ThemeToggle from "./ThemeToggle";
 import ClubKit from "./ClubKit";
 import { canSubstitute, substitute } from "@/lib/substitutions";
+import { formatXpts, squadProjection } from "@/lib/projections";
 const KEY = "touchline:v1";
 const draftSchema = z.object({
   id: z.string(),
@@ -346,6 +347,10 @@ export default function Planner() {
     (player) => !draft.picks.find((pick) => pick.player === player.id)?.starter,
   );
   const benchGoalkeepers = bench.filter((player) => player.position === 1);
+  const projection = squadProjection(draft, catalog);
+  const projectionLabel = catalog.projectionGameweek
+    ? `GW${catalog.projectionGameweek}`
+    : "Next GW";
   const benchOutfield = bench.filter((player) => player.position !== 1);
   const subPick =
     !locked && quickSub?.draft === draft.id
@@ -466,6 +471,17 @@ export default function Planner() {
             </span>
           </span>
           <Fixtures player={p} catalog={catalog!} />
+          <span
+            className="player-xpts"
+            title={`FPL projection for ${projectionLabel}; before captain multiplier`}
+          >
+            {projectionLabel} xPts{" "}
+            <b>
+              {formatXpts(
+                catalog!.projectionGameweek ? p.expectedPoints : null,
+              )}
+            </b>
+          </span>
         </button>
         <button
           className="quick-sub-button"
@@ -654,6 +670,29 @@ export default function Planner() {
                   <span className="pill">
                     {locked ? "BASELINE" : "PLANNING MODE"}
                   </span>
+                </div>
+                <div className="projection-summary">
+                  <div>
+                    <span>{projectionLabel} · Starting XI xPts</span>
+                    <strong>{formatXpts(projection.starters)}</strong>
+                  </div>
+                  <div>
+                    <span>Bench xPts</span>
+                    <strong>{formatXpts(projection.bench)}</strong>
+                  </div>
+                  <small>
+                    FPL estimates · captain ×2 in XI total · bench excluded. No
+                    automatic substitutions or chips.{" "}
+                    {draft.picks.filter((p) => p.starter).length !== 11
+                      ? "Incomplete XI: selected players only. "
+                      : ""}
+                    {!draft.picks.some(
+                      (p) => p.starter && p.player === draft.captain,
+                    )
+                      ? "Select a starting captain. "
+                      : ""}
+                    — means projections are unavailable.
+                  </small>
                 </div>
                 {locked && (
                   <div className="baseline-info">
@@ -1251,6 +1290,12 @@ export default function Planner() {
               {[
                 ["Price", money(detail.price)],
                 ["Points", detail.points],
+                [
+                  `${projectionLabel} xPts`,
+                  formatXpts(
+                    catalog.projectionGameweek ? detail.expectedPoints : null,
+                  ),
+                ],
                 ["Form", detail.form],
                 ["Selected", `${detail.ownership}%`],
                 ["Pts / game", detail.ppg],

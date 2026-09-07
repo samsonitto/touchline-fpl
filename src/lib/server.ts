@@ -39,7 +39,7 @@ export const getCatalog = unstable_cache(
     ]);
     return mapCatalog(b, f);
   },
-  ["touchline-catalog-v1"],
+  ["touchline-catalog-v2-xpts"],
   { revalidate: 300 },
 );
 export async function importTeam(id: number) {
