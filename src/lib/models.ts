@@ -58,6 +58,12 @@ export interface Pick {
   starter: boolean;
 }
 export interface Draft {
+  transfers?: {
+    base: number[];
+    bank: number;
+    free: number | null;
+    prices: Record<string, { purchase?: number; selling?: number }>;
+  };
   chip?: "triple-captain" | "bench-boost" | null;
   id: string;
   name: string;

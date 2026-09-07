@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { emptyDraft, type Catalog, type Draft } from "./models";
+import { transferSummary } from "./transfers";
 
 const schema = z.object({
   v: z.literal(1),
@@ -30,7 +31,14 @@ export function encodeShare(draft: Draft, catalog: Catalog): string {
     captain: draft.captain,
     vice: draft.vice,
     chip: draft.chip ?? null,
-    budget: draft.budget,
+    budget: draft.transfers
+      ? transferSummary(draft, catalog).bank +
+        draft.picks.reduce(
+          (sum, p) =>
+            sum + (catalog.players.find((x) => x.id === p.player)?.price ?? 0),
+          0,
+        )
+      : draft.budget,
   });
   return btoa(
     Array.from(new TextEncoder().encode(JSON.stringify(payload)), (b) =>

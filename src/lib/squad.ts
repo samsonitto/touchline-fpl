@@ -1,4 +1,5 @@
 import { Catalog, Draft, Player } from "./models";
+import { transferSummary } from "./transfers";
 export function playersIn(d: Draft, c: Catalog): Player[] {
   return d.picks.flatMap((p) => {
     const player = c.players.find((x) => x.id === p.player);
@@ -44,7 +45,8 @@ export function validate(d: Draft, c: Catalog): string[] {
   for (const club of c.clubs)
     if (ps.filter((p) => p.club === club.id).length > c.rules.clubLimit)
       issues.push(`Maximum ${c.rules.clubLimit} players from ${club.name}.`);
-  if (cost(d, c) > d.budget) issues.push("Squad exceeds the planning budget.");
+  if (transferSummary(d, c).bank < 0)
+    issues.push("Squad exceeds the planning budget.");
   if (xi.length !== c.rules.starters)
     issues.push(`Select ${c.rules.starters} starters (${xi.length} selected).`);
   if (!xi.some((p) => p.id === d.captain))
@@ -72,7 +74,18 @@ export function addIssue(
     return "Position quota full";
   if (ps.filter((x) => x.club === p.club).length >= c.rules.clubLimit)
     return "Club limit reached";
-  if (ps.reduce((a, x) => a + x.price, 0) + p.price > d.budget)
+  if (
+    transferSummary(
+      {
+        ...d,
+        picks: [
+          ...d.picks.filter((x) => x.player !== replace),
+          { player: p.id, starter: false },
+        ],
+      },
+      c,
+    ).bank < 0
+  )
     return "Over budget";
   return null;
 }

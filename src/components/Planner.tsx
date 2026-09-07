@@ -36,10 +36,32 @@ import Fixtures from "./Fixtures";
 import ThemeToggle from "./ThemeToggle";
 import ClubKit from "./ClubKit";
 import Sharing from "./Sharing";
+import TransferPlanning from "./TransferPlanning";
+import { transferSummary, moveBench } from "@/lib/transfers";
+import {
+  emptyHistory,
+  recordEdit,
+  travel,
+  type EditHistory,
+} from "@/lib/edit-history";
 import { canSubstitute, substitute } from "@/lib/substitutions";
 import { formatXpts, squadProjection, projectedTotal } from "@/lib/projections";
 const KEY = "touchline:v1";
 const draftSchema = z.object({
+  transfers: z
+    .object({
+      base: z.array(z.number().int().positive()).length(15),
+      bank: z.number().int().min(0).max(100000),
+      free: z.number().int().min(0).max(5).nullable(),
+      prices: z.record(
+        z.string(),
+        z.object({
+          purchase: z.number().int().min(0).max(1000).optional(),
+          selling: z.number().int().min(0).max(1000).optional(),
+        }),
+      ),
+    })
+    .optional(),
   chip: z.enum(["triple-captain", "bench-boost"]).nullish(),
   id: z.string(),
   name: z.string(),
@@ -99,6 +121,9 @@ export default function Planner() {
     >(null),
     [historyError, setHistoryError] = useState("");
   const dialog = useRef<HTMLDialogElement>(null);
+  const [editHistories, setEditHistories] = useState<
+    Record<string, EditHistory>
+  >({});
   const [quickSub, setQuickSub] = useState<{
     draft: string;
     player: number;
@@ -192,13 +217,19 @@ export default function Planner() {
       );
       return;
     }
+    const next = fn(draft);
+    if (JSON.stringify(next) === JSON.stringify(draft)) return;
+    setEditHistories((h) => ({
+      ...h,
+      [draft.id]: recordEdit(h[draft.id] ?? emptyHistory(), draft),
+    }));
     setState((s) =>
       s
         ? {
             ...s,
             drafts: s.drafts.map((d) =>
               d.id === draft.id
-                ? { ...fn(d), updated: new Date().toISOString() }
+                ? { ...next, updated: new Date().toISOString() }
                 : d,
             ),
           }
@@ -219,6 +250,28 @@ export default function Planner() {
     setState((s) => (s ? { ...s, drafts: [...s.drafts, d], active: d.id } : s));
     setReplace(undefined);
     setTab("builder");
+  }
+  function undoRedo(direction: "undo" | "redo") {
+    if (!draft || state?.baseline === draft.id) return;
+    const result = travel(
+      editHistories[draft.id] ?? emptyHistory(),
+      draft,
+      direction,
+    );
+    if (!result) return;
+    setEditHistories((h) => ({ ...h, [draft.id]: result.history }));
+    setState((s) =>
+      s
+        ? {
+            ...s,
+            drafts: s.drafts.map((d) => (d.id === draft.id ? result.draft : d)),
+          }
+        : s,
+    );
+    setQuickSub(null);
+    setReplace(undefined);
+    setDetail(null);
+    setNotice(direction === "undo" ? "Change undone." : "Change restored.");
   }
   function add(p: Player) {
     if (!draft || !catalog) return;
@@ -342,7 +395,7 @@ export default function Planner() {
       </>
     );
   const issues = validate(draft, catalog),
-    remaining = draft.budget - cost(draft, catalog),
+    remaining = transferSummary(draft, catalog).bank,
     ps = playersIn(draft, catalog),
     locked = state.baseline === draft.id;
   const bench = ps.filter(
@@ -405,9 +458,16 @@ export default function Planner() {
         p.price <= maxPrice &&
         (!available || p.status === "a") &&
         (!affordable ||
-          p.price <=
-            remaining +
-              (catalog.players.find((x) => x.id === replace)?.price ?? 0)) &&
+          transferSummary(
+            {
+              ...draft,
+              picks: [
+                ...draft.picks.filter((x) => x.player !== replace),
+                { player: p.id, starter: false },
+              ],
+            },
+            catalog,
+          ).bank >= 0) &&
         `${p.fullName} ${p.name} ${catalog.clubs.find((c) => c.id === p.club)?.name}`
           .toLowerCase()
           .includes(search.toLowerCase()),
@@ -619,7 +679,11 @@ export default function Planner() {
                 <strong className={remaining < 0 ? "negative" : "green"}>
                   {money(remaining)}
                 </strong>
-                <small>of {money(draft.budget)}</small>
+                <small>
+                  {draft.transfers
+                    ? "After planned transfers · check selling prices"
+                    : `of ${money(draft.budget)}`}
+                </small>
               </div>
               <div>
                 <span className="metric-label">SQUAD</span>
@@ -650,6 +714,27 @@ export default function Planner() {
               </button>
             </section>
             <Sharing draft={draft} catalog={catalog} onCopy={create} />
+            <div className="edit-toolbar" aria-label="Edit history">
+              <button
+                disabled={locked || !editHistories[draft.id]?.past.length}
+                onClick={() => undoRedo("undo")}
+              >
+                ↶ Undo
+              </button>
+              <button
+                disabled={locked || !editHistories[draft.id]?.future.length}
+                onClick={() => undoRedo("redo")}
+              >
+                ↷ Redo
+              </button>
+              <small>Last 50 changes per plan · this session</small>
+            </div>
+            <TransferPlanning
+              draft={draft}
+              catalog={catalog}
+              locked={locked}
+              update={update}
+            />
             <div className="mobile-tabs">
               <button
                 className={mobile === "squad" ? "active" : ""}
@@ -698,7 +783,7 @@ export default function Planner() {
                     <small>One chip at a time. Saved to this plan only.</small>
                   </fieldset>
                   <div>
-                    <span>{projectionLabel} · Total xPts</span>
+                    <span>{projectionLabel} · Total xPts before hits</span>
                     <strong>
                       {formatXpts(projectedTotal(draft, projection))}
                     </strong>
@@ -826,7 +911,32 @@ export default function Planner() {
                         <small>Goalkeeper</small>
                       </span>
                     )}
-                    {benchOutfield.map(card)}
+                    {benchOutfield.map((p, i) => (
+                      <div className="bench-slot" key={p.id}>
+                        {card(p)}
+                        <div className="bench-order">
+                          <button
+                            disabled={locked || i === 0}
+                            aria-label={`Move ${p.name} earlier on bench`}
+                            onClick={() =>
+                              update((d) => moveBench(d, catalog, p.id, -1))
+                            }
+                          >
+                            ←
+                          </button>
+                          <span>Sub {i + 1}</span>
+                          <button
+                            disabled={locked || i === benchOutfield.length - 1}
+                            aria-label={`Move ${p.name} later on bench`}
+                            onClick={() =>
+                              update((d) => moveBench(d, catalog, p.id, 1))
+                            }
+                          >
+                            →
+                          </button>
+                        </div>
+                      </div>
+                    ))}
                     {Array.from(
                       {
                         length: Math.max(0, 3 - benchOutfield.length),

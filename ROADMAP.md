@@ -16,9 +16,15 @@ Product focus: make planning and sharing the next FPL move quick and clear on mo
 
 Undo/redo for squad changes, explicit outfield bench ordering, and a desktop/mobile usability pass. Acceptance: a user can reverse a transfer, captain change or substitution without losing earlier work.
 
+Implemented: per-plan undo/redo for the last 50 edits in the current session, including transfers, captaincy, chips, reset and financial settings. A new edit clears redo. Outfield bench arrows change priority while the goalkeeper remains first. Added mobile-friendly control layouts and a three-column player statistics grid. Automated checks pass; hands-on desktop/mobile visual verification remains pending because no browser connection is available.
+
 ## Phase 3 — Trustworthy transfer budgets
 
 Purchase/selling-price overrides, free transfers and hit costs. Distinguish public market prices from user-specific selling prices. Acceptance: transfer affordability and net points reflect entered values and explain missing data.
+
+Implemented: opt-in transfer planning from a complete 15-player starting squad; editable starting bank, remaining free transfers (0–5), purchase prices and explicit selling overrides. Prices use integer tenths, half-profit rounding and full losses. Unknown selling prices fall back to labelled market estimates; unknown free transfers leave hits/net xPts unknown. Affordability, available bank and validation use the same calculation. Final incoming players relative to the starting squad determine planned transfers; each transfer beyond the entered allowance costs four points. Substitutions and reverted experiments do not count. Settings persist with the draft and support undo/redo. Sharing preserves the resulting planning budget but excludes purchase history and transfer settings.
+
+Scope: one gameweek of proposed moves, not already-confirmed transactions. Users must verify their starting bank and remaining free transfers in FPL. Historical hits, automatic substitutions, Wildcard/Free Hit and multi-week rollover remain outside this phase.
 
 ## Phase 4 — Multi-gameweek planning
 

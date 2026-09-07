@@ -574,6 +574,119 @@ main {
 .shared-preview > button {
   margin: 8px 8px 0 0;
 }
+.edit-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.edit-toolbar button,
+.transfer-planning button {
+  padding: 10px 14px;
+  min-height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--football-surface);
+  color: var(--ink);
+}
+.edit-toolbar small {
+  color: var(--muted);
+}
+.bench-slot {
+  flex: 1;
+  min-width: 0;
+  max-width: 104px;
+}
+.bench-slot > .pitch-card {
+  max-width: none;
+}
+.bench-order {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2px;
+  margin-top: 8px;
+  font-size: 10px;
+  color: var(--ink);
+}
+.bench-order button {
+  min-width: 28px;
+  min-height: 44px;
+  border-radius: 6px;
+  background: var(--football-surface);
+  color: var(--ink);
+}
+.transfer-planning {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 16px;
+  background: var(--football-surface);
+  margin-bottom: 16px;
+}
+.transfer-planning summary {
+  cursor: pointer;
+  font-weight: 700;
+}
+.transfer-planning fieldset {
+  border: 0;
+  padding: 0;
+  min-width: 0;
+}
+.transfer-planning p {
+  font-size: 13px;
+  margin: 14px 0;
+  line-height: 1.6;
+}
+.transfer-planning small {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 6px;
+}
+.transfer-inputs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 16px;
+}
+.transfer-planning label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  min-width: 0;
+}
+.transfer-planning input {
+  width: 100%;
+  min-width: 0;
+}
+.transfer-price-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+}
+.transfer-price-row strong {
+  font-size: 13px;
+  min-width: 0;
+}
+@media (max-width: 700px) {
+  .bench-slot {
+    max-width: 85px;
+  }
+  .transfer-price-row {
+    grid-template-columns: 1fr 1fr;
+  }
+  .transfer-price-row > strong {
+    grid-column: 1/-1;
+  }
+  .detail-stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
 .player-kit {
   position: relative;
   display: flex;

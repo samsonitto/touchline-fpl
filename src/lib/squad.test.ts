@@ -13,6 +13,8 @@ import { squadProjection, formatXpts, projectedTotal } from "./projections";
 import { bootstrapSchema } from "./fpl";
 import { encodeShare, decodeShare } from "./sharing";
 import { canSubstitute, substitute } from "./substitutions";
+import { sellingPrice, transferSummary, moveBench } from "./transfers";
+import { emptyHistory, recordEdit, travel } from "./edit-history";
 const positions = [
   { id: 1, name: "Goalkeeper", short: "GKP", count: 2, min: 1, max: 1 },
   { id: 2, name: "Defender", short: "DEF", count: 5, min: 3, max: 5 },
@@ -104,6 +106,93 @@ describe("quick substitutions", () => {
   });
 });
 describe("squad rules", () => {
+  it("applies half-profit rounding, losses, and explicit selling overrides", () => {
+    expect(sellingPrice(57, 55)).toBe(56);
+    expect(sellingPrice(58, 55)).toBe(56);
+    expect(sellingPrice(52, 55)).toBe(52);
+    expect(sellingPrice(57, 55, 54)).toBe(54);
+    expect(sellingPrice(57)).toBe(57);
+  });
+  it("calculates net planned transfers and applies selling prices to affordability", () => {
+    const d: Draft = {
+      ...draft,
+      transfers: {
+        base: draft.picks.map((p) => p.player),
+        bank: 0,
+        free: 0,
+        prices: { 13: { selling: 49 } },
+      },
+    };
+    expect(addIssue(d, catalog.players[15], catalog, 13)).toBe("Over budget");
+    const next = {
+      ...d,
+      picks: d.picks.map((p) => (p.player === 13 ? { ...p, player: 16 } : p)),
+    };
+    expect(transferSummary(next, catalog)).toMatchObject({
+      bank: -1,
+      incoming: [16],
+      outgoing: [13],
+      hits: 4,
+      estimated: [],
+    });
+    expect(
+      transferSummary(
+        { ...next, transfers: { ...d.transfers!, free: 1 } },
+        catalog,
+      ).hits,
+    ).toBe(0);
+    expect(
+      transferSummary(
+        { ...next, transfers: { ...d.transfers!, free: null } },
+        catalog,
+      ).hits,
+    ).toBeNull();
+    expect(transferSummary(d, catalog)).toMatchObject({
+      bank: 0,
+      incoming: [],
+      outgoing: [],
+      hits: 0,
+    });
+    expect(
+      transferSummary(
+        { ...next, transfers: { ...d.transfers!, prices: {} } },
+        catalog,
+      ).estimated,
+    ).toEqual([13]);
+  });
+  it("reorders outfield bench without changing goalkeeper, lineup, or captaincy", () => {
+    const next = moveBench(draft, catalog, 12, -1);
+    expect(next.picks.filter((p) => !p.starter).map((p) => p.player)).toEqual([
+      2, 12, 7, 15,
+    ]);
+    expect(next.picks.filter((p) => p.starter)).toEqual(
+      draft.picks.filter((p) => p.starter),
+    );
+    expect(next.captain).toBe(draft.captain);
+    expect(moveBench(draft, catalog, 2, 1)).toBe(draft);
+    expect(moveBench(draft, catalog, 7, -1)).toBe(draft);
+  });
+  it("undoes and redoes complete draft changes and clears redo after new edits", () => {
+    const next = {
+      ...draft,
+      captain: 14,
+      vice: 13,
+      chip: "triple-captain" as const,
+    };
+    const h = recordEdit(emptyHistory(), draft);
+    const undone = travel(h, next, "undo")!;
+    expect(undone.draft).toMatchObject({ captain: 13, vice: 14 });
+    expect(travel(undone.history, undone.draft, "redo")!.draft).toMatchObject({
+      captain: 14,
+      vice: 13,
+      chip: "triple-captain",
+    });
+    expect(recordEdit(undone.history, undone.draft).future).toEqual([]);
+    expect(travel(emptyHistory(), draft, "undo")).toBeNull();
+    let bounded = emptyHistory();
+    for (let i = 0; i < 60; i++) bounded = recordEdit(bounded, draft);
+    expect(bounded.past).toHaveLength(50);
+  });
   it("shares a Unicode snapshot with roles, order and chip but no manager identity", () => {
     const c = {
       ...catalog,
