@@ -508,6 +508,72 @@ main {
   border-color: #a7f66b;
   font-weight: 750;
 }
+.sharing-panel {
+  background: var(--football-surface);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+.share-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.share-actions > span,
+.share-actions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.share-actions > span {
+  font-weight: 750;
+  margin-right: auto;
+}
+.share-actions button,
+.shared-preview > button {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.sharing-panel small,
+.shared-preview p {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.sharing-panel > p {
+  font-size: 13px;
+  margin-top: 10px;
+}
+.share-link {
+  display: block;
+  font-size: 12px;
+  margin-top: 12px;
+}
+.share-link input {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  margin-top: 4px;
+}
+.shared-preview {
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 16px;
+  margin-bottom: 16px;
+}
+.shared-preview h2 {
+  overflow-wrap: anywhere;
+}
+.shared-preview > div {
+  margin: 10px 0;
+}
+.shared-preview > button {
+  margin: 8px 8px 0 0;
+}
 .player-kit {
   position: relative;
   display: flex;

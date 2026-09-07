@@ -11,6 +11,7 @@ import {
 import { mapCatalog, mapImport } from "./fpl";
 import { squadProjection, formatXpts, projectedTotal } from "./projections";
 import { bootstrapSchema } from "./fpl";
+import { encodeShare, decodeShare } from "./sharing";
 import { canSubstitute, substitute } from "./substitutions";
 const positions = [
   { id: 1, name: "Goalkeeper", short: "GKP", count: 2, min: 1, max: 1 },
@@ -103,6 +104,75 @@ describe("quick substitutions", () => {
   });
 });
 describe("squad rules", () => {
+  it("shares a Unicode snapshot with roles, order and chip but no manager identity", () => {
+    const c = {
+      ...catalog,
+      gameweeks: [
+        {
+          id: 1,
+          name: "GW1",
+          deadline: "2026-08-21T18:00:00Z",
+          current: true,
+          finished: false,
+        },
+      ],
+    };
+    const source: Draft = {
+      ...draft,
+      name: "José ⚽ plan",
+      chip: "bench-boost",
+      imported: {
+        entry: 123,
+        gameweek: 1,
+        team: "Private",
+        manager: "Secret manager",
+      },
+    };
+    const token = encodeShare(source, c);
+    const copy = decodeShare(token, c);
+    expect(copy).toMatchObject({
+      name: source.name,
+      picks: source.picks,
+      captain: source.captain,
+      vice: source.vice,
+      chip: source.chip,
+      budget: source.budget,
+    });
+    expect(copy.id).not.toBe(source.id);
+    expect(copy.imported).toBeUndefined();
+    expect(atob(token.replaceAll("-", "+").replaceAll("_", "/"))).not.toContain(
+      "Secret manager",
+    );
+    expect(
+      decodeShare(
+        encodeShare(
+          { ...draft, picks: draft.picks.slice(0, 1), captain: 1, vice: null },
+          c,
+        ),
+        c,
+      ).picks,
+    ).toHaveLength(1);
+    expect(() =>
+      decodeShare(token, {
+        ...c,
+        gameweeks: [{ ...c.gameweeks[0], deadline: "2027-08-21T18:00:00Z" }],
+      }),
+    ).toThrow(/season/);
+    expect(() => decodeShare(token, { ...c, players: [] })).toThrow(
+      /unavailable/,
+    );
+    expect(() =>
+      decodeShare(
+        encodeShare({ ...draft, picks: [draft.picks[0], draft.picks[0]] }, c),
+        c,
+      ),
+    ).toThrow(/duplicate/);
+    expect(() =>
+      decodeShare(encodeShare({ ...draft, captain: 2 }, c), c),
+    ).toThrow(/captain/);
+    for (const bad of ["", "bad%", "a".repeat(6001), btoa("{}")])
+      expect(() => decodeShare(bad, c)).toThrow();
+  });
   it("totals projections with captain doubled and bench separate", () => {
     const c = {
       ...catalog,

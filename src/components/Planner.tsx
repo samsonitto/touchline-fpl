@@ -35,6 +35,7 @@ import {
 import Fixtures from "./Fixtures";
 import ThemeToggle from "./ThemeToggle";
 import ClubKit from "./ClubKit";
+import Sharing from "./Sharing";
 import { canSubstitute, substitute } from "@/lib/substitutions";
 import { formatXpts, squadProjection, projectedTotal } from "@/lib/projections";
 const KEY = "touchline:v1";
@@ -648,6 +649,7 @@ export default function Planner() {
                 <span>Duplicate</span>
               </button>
             </section>
+            <Sharing draft={draft} catalog={catalog} onCopy={create} />
             <div className="mobile-tabs">
               <button
                 className={mobile === "squad" ? "active" : ""}
