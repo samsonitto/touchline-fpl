@@ -445,6 +445,22 @@ main {
     font-size: 8px;
   }
 }
+.player-club-detail {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 10px;
+  margin-bottom: 16px;
+  color: var(--ink);
+  font-size: 16px;
+}
+.player-club-detail > span {
+  color: var(--muted);
+  font-size: 12px;
+}
+.player-position-detail {
+  flex-basis: 100%;
+}
 .player-kit {
   position: relative;
   display: flex;

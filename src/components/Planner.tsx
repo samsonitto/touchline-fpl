@@ -1276,11 +1276,17 @@ export default function Planner() {
             >
               <X />
             </button>
-            <span className="eyebrow">
-              {catalog.clubs.find((c) => c.id === detail.club)?.name} /{" "}
-              {catalog.positions.find((p) => p.id === detail.position)?.name}
-            </span>
             <h2 id="player-detail-title">{detail.fullName}</h2>
+            <p className="player-club-detail">
+              <span>Club</span>{" "}
+              <strong>
+                {catalog.clubs.find((c) => c.id === detail.club)?.name ??
+                  "Club unavailable"}
+              </strong>
+              <span className="player-position-detail">
+                {catalog.positions.find((p) => p.id === detail.position)?.name}
+              </span>
+            </p>
             <p className={detail.status === "a" ? "green" : "negative"}>
               {detail.status === "a"
                 ? "Available"
