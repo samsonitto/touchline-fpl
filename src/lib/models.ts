@@ -58,6 +58,8 @@ export interface Pick {
   starter: boolean;
 }
 export interface Draft {
+  gameweek?: number;
+  timeline?: { series: string; parent?: string; source?: string };
   transfers?: {
     base: number[];
     bank: number;

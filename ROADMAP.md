@@ -30,9 +30,15 @@ Scope: one gameweek of proposed moves, not already-confirmed transactions. Users
 
 Gameweek timeline for transfers, lineups, captaincy and chips. Define rollover and chip availability rules. Secure and validate a multi-week projection source before displaying longer-range xPts.
 
+Implemented: linked, locally saved gameweek snapshots; next-week creation carries the final squad, bank and retained purchase/selling settings, records purchase prices for incoming players, and clears the active chip. Free transfers roll forward as `min(5, max(0, allowance - planned transfers) + 1)`; unknown allowances remain unknown. Every week has its own lineup, captaincy, transfers and chip. Editing an ancestor flags descendants for review. “Replace this week from previous week” explicitly rebuilds a snapshot and supports Undo; subsequent weeks stay flagged until reviewed. Duplicate creates a detached alternative. Chip conflicts prevent a second Triple Captain or Bench Boost in the same timeline and season half. Prior official chip usage is not known. Wildcard/Free Hit remain unsupported.
+
+Projection coverage: verified FPL bootstrap data supplies `ep_this` and `ep_next`, not a multi-week horizon. Future weeks therefore show fixtures, bank and transfers but no xPts or Best XI suggestion. A licensed, validated multi-week projection source is still outstanding; future projections have deliberately not been invented or extrapolated. Shared snapshots and image exports carry the selected gameweek.
+
 ## Phase 5 — Helpful suggestions
 
 Suggest a legal best XI and captain from the user's squad; show projected gain and allow explicit application. Keep the source and limits of predictions visible.
+
+Implemented: exhaustively evaluates all 1,365 possible elevens in a complete 15-player squad, enforces positional formation limits, chooses the highest-projection starting captain and accounts for Triple Captain/Bench Boost. Ties favour fewer changes. Review shows formation, captain, vice-captain, lineup, bench, projected total and gain before explicit Apply. Applying uses normal draft history and is undoable. Unknown projections, missing players and unsupported gameweeks disable suggestions. There are no transfers, automatic substitutions or vice-captain fallback predictions. Availability is taken only from the source projections; users should review news.
 
 ## Phase 6 — Launch and retention
 

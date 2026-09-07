@@ -46,6 +46,10 @@ Availability, price and fixture data can change. Fixtures include the next three
 
 ## Deploy to Vercel
 
+Gameweek timelines keep separate linked plans. Configure a complete squad and transfer planning, start a timeline, then use “Plan GW…” to carry it forward. Bank and free transfers roll forward, incoming purchase prices are recorded, and chips reset. Earlier edits flag dependent weeks for review instead of overwriting them. Rebuilding a week from its parent is undoable; duplicating detaches an alternative plan. The timeline checks repeated Triple Captain/Bench Boost selections within each season half, but cannot know chips already used in the official game. Future fixtures use the selected gameweek; future prices are today's estimates.
+
+“Suggest XI & captain” reviews every legal XI in the existing squad using FPL projections. It shows the projected gain before Apply and supports Undo. Estimates are available for the official next gameweek only; later weeks have no xPts or suggestions until a validated multi-week data source is added.
+
 Player cards show FPL's `ep_next` projection for the event explicitly marked `is_next`. These are estimates, displayed once per gameweek without multiplying by fixture count. Starting XI xPts include captain ×2, or ×3 with Triple Captain. Bench Boost adds bench xPts to the overall total. One planning chip can be selected per draft and is saved locally; chip availability and previous usage in FPL are not tracked. These controls do not activate chips in the official game. Automatic substitutions and vice-captain fallback are not modelled. Missing projections display a dash and prevent a misleading partial total. Incomplete lineups are labelled as selected-player totals.
 
 Import this directory as a Next.js project, or deploy it with Vercel's CLI/connector. Use `npm run build`; no environment setup is required. Upstream FPL access depends on FPL accepting requests from the deployment region. The UI handles blocked/unavailable responses explicitly.

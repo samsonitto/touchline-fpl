@@ -30,9 +30,10 @@ export async function downloadSquadImage(draft: Draft, catalog: Catalog) {
   ctx.fillRect(0, 0, 1200, 1500);
   text("TOUCHLINE", 50, 70, 40, "#a7f66b");
   text(draft.name, 50, 125, 32);
-  const gw = catalog.projectionGameweek
-    ? `GW${catalog.projectionGameweek}`
-    : "Next GW";
+  const gw =
+    (draft.gameweek ?? catalog.projectionGameweek)
+      ? `GW${draft.gameweek ?? catalog.projectionGameweek}`
+      : "Next GW";
   const chip =
     draft.chip === "triple-captain"
       ? "Triple Captain ×3"

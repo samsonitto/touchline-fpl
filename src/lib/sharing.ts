@@ -4,6 +4,7 @@ import { transferSummary } from "./transfers";
 
 const schema = z.object({
   v: z.literal(1),
+  gameweek: z.number().int().min(1).max(38).optional(),
   season: z.string().max(40),
   name: z.string().trim().min(1).max(100),
   picks: z
@@ -25,6 +26,7 @@ function season(catalog: Catalog) {
 export function encodeShare(draft: Draft, catalog: Catalog): string {
   const payload = schema.parse({
     v: 1,
+    gameweek: draft.gameweek ?? catalog.projectionGameweek ?? undefined,
     season: season(catalog),
     name: draft.name.slice(0, 100),
     picks: draft.picks,
@@ -86,6 +88,7 @@ export function decodeShare(token: string, catalog: Catalog): Draft {
   return {
     ...emptyDraft(payload.budget),
     name: payload.name,
+    gameweek: payload.gameweek,
     picks: payload.picks,
     captain: payload.captain,
     vice: payload.vice,

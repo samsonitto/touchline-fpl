@@ -15,6 +15,13 @@ import { encodeShare, decodeShare } from "./sharing";
 import { canSubstitute, substitute } from "./substitutions";
 import { sellingPrice, transferSummary, moveBench } from "./transfers";
 import { emptyHistory, recordEdit, travel } from "./edit-history";
+import { bestXI } from "./best-xi";
+import {
+  nextWeek,
+  catalogForWeek,
+  timelineStale,
+  chipConflict,
+} from "./timeline";
 const positions = [
   { id: 1, name: "Goalkeeper", short: "GKP", count: 2, min: 1, max: 1 },
   { id: 2, name: "Defender", short: "DEF", count: 5, min: 3, max: 5 },
@@ -106,6 +113,127 @@ describe("quick substitutions", () => {
   });
 });
 describe("squad rules", () => {
+  it("finds the highest-projection legal XI, captain and chip total without transfers", () => {
+    const c = {
+      ...catalog,
+      projectionGameweek: 4,
+      players: catalog.players.map((p) => ({
+        ...p,
+        expectedPoints:
+          ({ 2: 10, 7: 8, 12: 9, 15: 7 } as Record<number, number>)[p.id] ?? 1,
+      })),
+    };
+    const result = bestXI(draft, c);
+    expect(result.score).toBe(51);
+    expect(result.draft.captain).toBe(2);
+    expect(validate(result.draft, c)).toEqual([]);
+    expect(result.draft.picks.map((p) => p.player)).toEqual(
+      draft.picks.map((p) => p.player),
+    );
+    expect(bestXI({ ...draft, chip: "triple-captain" }, c).score).toBe(61);
+    expect(bestXI({ ...draft, chip: "bench-boost" }, c).score).toBe(55);
+    expect(() => bestXI({ ...draft, gameweek: 5 }, c)).toThrow(/gameweek/);
+    expect(() =>
+      bestXI(draft, {
+        ...c,
+        players: c.players.map((p) =>
+          p.id === 1 ? { ...p, expectedPoints: null } : p,
+        ),
+      }),
+    ).toThrow(/projection/);
+    expect(() => bestXI({ ...draft, picks: draft.picks.slice(1) }, c)).toThrow(
+      /15/,
+    );
+  });
+  it("keeps the existing XI on tied projections", () => {
+    const c = {
+      ...catalog,
+      projectionGameweek: 4,
+      players: catalog.players.map((p) => ({ ...p, expectedPoints: 2 })),
+    };
+    const result = bestXI(draft, c);
+    expect(result.gain).toBe(0);
+    expect(result.draft.picks).toEqual(draft.picks);
+    expect(result.draft.captain).toBe(draft.captain);
+  });
+  it("rolls bank, free transfers and purchase prices into a separate next week", () => {
+    const c = {
+      ...catalog,
+      projectionGameweek: 4,
+      gameweeks: [4, 5, 6].map((id) => ({
+        id,
+        name: `GW${id}`,
+        deadline: "2026-09-12",
+        current: false,
+        finished: false,
+      })),
+    };
+    const d: Draft = {
+      ...draft,
+      gameweek: 4,
+      timeline: { series: "test" },
+      chip: "triple-captain",
+      transfers: {
+        base: draft.picks.map((p) => p.player),
+        bank: 20,
+        free: 5,
+        prices: { 13: { selling: 49 } },
+      },
+      picks: draft.picks.map((p) =>
+        p.player === 13 ? { ...p, player: 16 } : p,
+      ),
+      captain: 16,
+    };
+    const next = nextWeek(d, c);
+    expect(next.gameweek).toBe(5);
+    expect(next.transfers).toMatchObject({
+      bank: 19,
+      free: 5,
+      prices: { 16: { purchase: 50 } },
+    });
+    expect(next.chip).toBeNull();
+    expect(next.id).not.toBe(d.id);
+    expect(next.picks).toEqual(d.picks);
+    expect(
+      nextWeek({ ...d, transfers: { ...d.transfers!, free: 0 } }, c).transfers
+        ?.free,
+    ).toBe(1);
+    expect(
+      nextWeek({ ...d, transfers: { ...d.transfers!, free: null } }, c)
+        .transfers?.free,
+    ).toBeNull();
+    expect(() => nextWeek({ ...d, gameweek: 6 }, c)).toThrow(/later/);
+    expect(timelineStale(next, [d, next])).toBe(false);
+    expect(timelineStale(next, [{ ...d, updated: "changed" }, next])).toBe(
+      true,
+    );
+    expect(timelineStale(next, [next])).toBe(true);
+    const third = nextWeek(next, c);
+    expect(
+      timelineStale(third, [{ ...d, updated: "changed" }, next, third]),
+    ).toBe(true);
+    expect(chipConflict({ ...next, chip: "triple-captain" }, [d, next])).toBe(
+      d,
+    );
+    expect(
+      chipConflict({ ...next, gameweek: 20, chip: "triple-captain" }, [
+        d,
+        next,
+      ]),
+    ).toBeUndefined();
+  });
+  it("does not relabel next-gameweek projections as future predictions", () => {
+    const c = {
+      ...catalog,
+      projectionGameweek: 4,
+      players: catalog.players.map((p) => ({ ...p, expectedPoints: 5 })),
+    };
+    const future = catalogForWeek(c, 5);
+    expect(future.projectionGameweek).toBeNull();
+    expect(future.players.every((p) => p.expectedPoints === null)).toBe(true);
+    expect(squadProjection({ ...draft, gameweek: 5 }, c).starters).toBeNull();
+    expect(catalogForWeek(c, 4).players[0].expectedPoints).toBe(5);
+  });
   it("applies half-profit rounding, losses, and explicit selling overrides", () => {
     expect(sellingPrice(57, 55)).toBe(56);
     expect(sellingPrice(58, 55)).toBe(56);

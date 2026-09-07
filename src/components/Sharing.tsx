@@ -69,7 +69,10 @@ export default function Sharing({
     <section className="sharing-panel" aria-label="Share squad">
       {incoming && (
         <div className="shared-preview">
-          <h2>Shared squad: {incoming.name}</h2>
+          <h2>
+            Shared squad: {incoming.name}
+            {incoming.gameweek ? ` · GW${incoming.gameweek}` : ""}
+          </h2>
           <p>
             Preview ·{" "}
             {incoming.chip === "triple-captain"

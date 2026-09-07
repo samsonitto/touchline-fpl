@@ -16,7 +16,12 @@ export function projectedTotal(
 export function squadProjection(draft: Draft, catalog: Catalog) {
   function total(starter: boolean): number | null {
     const picks = draft.picks.filter((p) => p.starter === starter);
-    if (!catalog.projectionGameweek || !picks.length) return null;
+    if (
+      !catalog.projectionGameweek ||
+      (draft.gameweek && draft.gameweek !== catalog.projectionGameweek) ||
+      !picks.length
+    )
+      return null;
     let sum = 0;
     for (const pick of picks) {
       const value = catalog.players.find(

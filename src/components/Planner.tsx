@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
   ArrowLeftRight,
@@ -36,6 +36,14 @@ import Fixtures from "./Fixtures";
 import ThemeToggle from "./ThemeToggle";
 import ClubKit from "./ClubKit";
 import Sharing from "./Sharing";
+import Timeline from "./Timeline";
+import BestXI from "./BestXI";
+import {
+  catalogForWeek,
+  nextWeek,
+  chipConflict,
+  timelineStale,
+} from "@/lib/timeline";
 import TransferPlanning from "./TransferPlanning";
 import { transferSummary, moveBench } from "@/lib/transfers";
 import {
@@ -48,6 +56,14 @@ import { canSubstitute, substitute } from "@/lib/substitutions";
 import { formatXpts, squadProjection, projectedTotal } from "@/lib/projections";
 const KEY = "touchline:v1";
 const draftSchema = z.object({
+  gameweek: z.number().int().min(1).max(38).optional(),
+  timeline: z
+    .object({
+      series: z.string(),
+      parent: z.string().optional(),
+      source: z.string().optional(),
+    })
+    .optional(),
   transfers: z
     .object({
       base: z.array(z.number().int().positive()).length(15),
@@ -96,7 +112,7 @@ async function api<T>(url: string): Promise<T> {
   return data;
 }
 export default function Planner() {
-  const [catalog, setCatalog] = useState<Catalog | null>(null),
+  const [sourceCatalog, setCatalog] = useState<Catalog | null>(null),
     [state, setState] = useState<SavedState | null>(null),
     [error, setError] = useState(""),
     [notice, setNotice] = useState(""),
@@ -208,6 +224,11 @@ export default function Planner() {
   }, [detail]);
   const draft =
     state?.drafts.find((d) => d.id === state.active) ?? state?.drafts[0];
+  const catalog = useMemo(
+    () =>
+      sourceCatalog ? catalogForWeek(sourceCatalog, draft?.gameweek) : null,
+    [sourceCatalog, draft?.gameweek],
+  );
   function update(fn: (d: Draft) => Draft) {
     setQuickSub(null);
     if (!draft) return;
@@ -218,6 +239,13 @@ export default function Planner() {
       return;
     }
     const next = fn(draft);
+    const conflict = chipConflict(next, state?.drafts ?? []);
+    if (conflict && next.chip !== draft.chip) {
+      setNotice(
+        `That chip is already planned for GW${conflict.gameweek} in this timeline.`,
+      );
+      return;
+    }
     if (JSON.stringify(next) === JSON.stringify(draft)) return;
     setEditHistories((h) => ({
       ...h,
@@ -242,6 +270,7 @@ export default function Planner() {
     const d = source
       ? {
           ...source,
+          timeline: undefined,
           id: crypto.randomUUID(),
           name: `${source.name} copy`,
           updated: new Date().toISOString(),
@@ -272,6 +301,39 @@ export default function Planner() {
     setReplace(undefined);
     setDetail(null);
     setNotice(direction === "undo" ? "Change undone." : "Change restored.");
+  }
+  function carryForward() {
+    if (!draft || !state || !sourceCatalog || state.baseline === draft.id)
+      return;
+    try {
+      if (timelineStale(draft, state.drafts))
+        throw new Error(
+          "Review this week's outdated starting squad before adding another week.",
+        );
+      if (chipConflict(draft, state.drafts))
+        throw new Error(
+          "Resolve the repeated chip selection before carrying forward.",
+        );
+      const next = nextWeek(draft, sourceCatalog);
+      const existing = state.drafts.find(
+        (d) =>
+          d.timeline?.series === next.timeline!.series &&
+          d.gameweek === next.gameweek,
+      );
+      if (existing) {
+        setState({ ...state, active: existing.id });
+        return;
+      }
+      setState({ ...state, drafts: [...state.drafts, next], active: next.id });
+      setQuickSub(null);
+      setReplace(undefined);
+      setDetail(null);
+      setNotice(
+        `GW${next.gameweek} created. Bank and free transfers carried forward; chip cleared.`,
+      );
+    } catch (e) {
+      setNotice((e as Error).message);
+    }
   }
   function add(p: Player) {
     if (!draft || !catalog) return;
@@ -403,9 +465,10 @@ export default function Planner() {
   );
   const benchGoalkeepers = bench.filter((player) => player.position === 1);
   const projection = squadProjection(draft, catalog);
-  const projectionLabel = catalog.projectionGameweek
-    ? `GW${catalog.projectionGameweek}`
-    : "Next GW";
+  const projectionLabel =
+    (draft.gameweek ?? catalog.projectionGameweek)
+      ? `GW${draft.gameweek ?? catalog.projectionGameweek}`
+      : "Next GW";
   const benchOutfield = bench.filter((player) => player.position !== 1);
   const subPick =
     !locked && quickSub?.draft === draft.id
@@ -714,6 +777,53 @@ export default function Planner() {
               </button>
             </section>
             <Sharing draft={draft} catalog={catalog} onCopy={create} />
+            <Timeline
+              draft={draft}
+              catalog={sourceCatalog!}
+              drafts={state.drafts}
+              locked={locked}
+              onStart={() =>
+                update((d) => ({
+                  ...d,
+                  gameweek: sourceCatalog!.projectionGameweek!,
+                  timeline: { series: d.id },
+                }))
+              }
+              onNext={carryForward}
+              onSelect={(id) => {
+                setState({ ...state, active: id });
+                setQuickSub(null);
+                setReplace(undefined);
+                setDetail(null);
+              }}
+              onRefresh={() => {
+                const parent = state.drafts.find(
+                  (d) => d.id === draft.timeline?.parent,
+                );
+                if (!parent || timelineStale(parent, state.drafts)) {
+                  setNotice("Restore or refresh the preceding week first.");
+                  return;
+                }
+                try {
+                  const rebuilt = nextWeek(parent, sourceCatalog!);
+                  update((d) => ({ ...rebuilt, id: d.id, name: d.name }));
+                } catch (e) {
+                  setNotice((e as Error).message);
+                }
+              }}
+            />
+            <BestXI
+              key={`${draft.id}:${draft.updated}`}
+              draft={draft}
+              catalog={catalog}
+              locked={locked}
+              onApply={(suggestion) => {
+                update(() => suggestion);
+                setNotice(
+                  "Suggested XI and captain applied. You can undo this change.",
+                );
+              }}
+            />
             <div className="edit-toolbar" aria-label="Edit history">
               <button
                 disabled={locked || !editHistories[draft.id]?.past.length}
@@ -780,7 +890,11 @@ export default function Planner() {
                         {label}
                       </button>
                     ))}
-                    <small>One chip at a time. Saved to this plan only.</small>
+                    <small>
+                      One chip per gameweek. Timeline checks prevent using the
+                      same chip twice in a season half; prior official chip
+                      usage must be checked in FPL.
+                    </small>
                   </fieldset>
                   <div>
                     <span>{projectionLabel} · Total xPts before hits</span>

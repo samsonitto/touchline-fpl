@@ -687,6 +687,68 @@ main {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
+.timeline-panel,
+.best-xi-panel {
+  background: var(--football-surface);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  margin-bottom: 16px;
+  padding: 16px;
+}
+.timeline-panel h2,
+.best-xi-panel h2 {
+  font-size: 16px;
+  margin-bottom: 10px;
+}
+.timeline-panel p,
+.best-xi-panel p {
+  font-size: 13px;
+  line-height: 1.6;
+  margin: 10px 0;
+}
+.timeline-panel small,
+.best-xi-panel small {
+  display: block;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--muted);
+  margin: 8px 0;
+}
+.timeline-panel button,
+.best-xi-panel button {
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  margin-right: 8px;
+  margin-bottom: 8px;
+}
+.timeline-weeks {
+  display: flex;
+  overflow-x: auto;
+  padding-bottom: 8px;
+}
+.timeline-weeks button {
+  min-width: 155px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  text-align: left;
+}
+.timeline-weeks button span {
+  font-size: 11px;
+}
+.timeline-weeks button[aria-pressed="true"] {
+  background: var(--football-purple);
+  color: #a7f66b;
+}
+.suggestion-review {
+  border-top: 1px solid var(--line);
+  margin-top: 12px;
+  padding-top: 8px;
+}
 .player-kit {
   position: relative;
   display: flex;
