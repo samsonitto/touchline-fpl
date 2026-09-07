@@ -327,6 +327,11 @@ export default function Planner() {
     remaining = draft.budget - cost(draft, catalog),
     ps = playersIn(draft, catalog),
     locked = state.baseline === draft.id;
+  const bench = ps.filter(
+    (player) => !draft.picks.find((pick) => pick.player === player.id)?.starter,
+  );
+  const benchGoalkeepers = bench.filter((player) => player.position === 1);
+  const benchOutfield = bench.filter((player) => player.position !== 1);
   const sorted = catalog.players
     .filter(
       (p) =>
@@ -618,22 +623,22 @@ export default function Planner() {
                     </small>
                   </div>
                   <div className="bench-players">
-                    {ps
-                      .filter(
-                        (p) =>
-                          !draft.picks.find((x) => x.player === p.id)?.starter,
-                      )
-                      .map(card)}
+                    {benchGoalkeepers.length ? (
+                      benchGoalkeepers.map(card)
+                    ) : (
+                      <span className="bench-empty">
+                        GK
+                        <small>Goalkeeper</small>
+                      </span>
+                    )}
+                    {benchOutfield.map(card)}
                     {Array.from(
                       {
-                        length: Math.max(
-                          0,
-                          4 - draft.picks.filter((p) => !p.starter).length,
-                        ),
+                        length: Math.max(0, 3 - benchOutfield.length),
                       },
                       (_, i) => (
                         <span key={i} className="bench-empty">
-                          {i + 1}
+                          {benchOutfield.length + i + 1}
                           <small>Substitute</small>
                         </span>
                       ),
